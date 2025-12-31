@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -280,30 +281,78 @@
             box-shadow: 0 0 10px var(--success);
         }
 
-        .legacy-formats {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 15px;
+        .led.recording {
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+            animation: pulse 1s infinite;
         }
 
-        .format-btn {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 8px 15px;
-            border-radius: 6px;
-            font-size: 0.9rem;
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
 
-        .format-btn:hover {
-            background: rgba(52, 152, 219, 0.3);
+        .frequency-display {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .frequency-meter {
+            height: 20px;
+            background: linear-gradient(90deg, 
+                #27ae60 0%, 
+                #2ecc71 20%, 
+                #f1c40f 40%, 
+                #e67e22 60%, 
+                #e74c3c 80%, 
+                #c0392b 100%);
+            border-radius: 10px;
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .frequency-marker {
+            position: absolute;
+            top: -5px;
+            width: 2px;
+            height: 30px;
+            background: white;
+            transform: translateX(-50%);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: var(--accent);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            display: none;
+        }
+
+        .notification.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
     </style>
 </head>
 <body>
+    <div class="notification" id="notification"></div>
     <div class="container">
         <header>
             <h1>WSSTV Protocol</h1>
-            <div class="subtitle">Special SSTV Encoder/Decoder with Advanced Features</div>
+            <div class="subtitle">Special SSTV Encoder/Decoder with Microphone Support</div>
         </header>
 
         <div class="main-grid">
@@ -314,31 +363,31 @@
                         <input type="file" class="file-input" id="imageInput" accept="image/*">
                         📁 Select Image
                     </label>
-                    <button id="encodeBtn">🔊 Encode to Audio</button>
+                    <button id="encodeBtn" disabled>🔊 Encode to Audio</button>
                     <button id="playBtn" disabled>▶️ Play Audio</button>
                     <button id="stopBtn" disabled>⏹️ Stop Audio</button>
                     <button id="saveBtn" disabled>💾 Save Audio</button>
                 </div>
 
                 <div class="slider-container">
-                    <label for="pixelDuration">Pixel Duration: <span id="pixelDurationValue">10</span> ms</label>
-                    <input type="range" id="pixelDuration" class="slider" min="5" max="50" value="10" step="1">
+                    <label for="pixelDuration">Pixel Duration: <span id="pixelDurationValue">15</span> ms</label>
+                    <input type="range" id="pixelDuration" class="slider" min="5" max="50" value="15" step="1">
                 </div>
 
                 <div class="slider-container">
-                    <label for="resolution">Resolution: <span id="resolutionValue">Medium</span></label>
-                    <input type="range" id="resolution" class="slider" min="1" max="3" value="2" step="1">
+                    <label for="resolution">Resolution Scale: <span id="resolutionValue">0.5</span></label>
+                    <input type="range" id="resolution" class="slider" min="1" max="10" value="5" step="1">
                 </div>
 
                 <div class="controls">
-                    <button id="encodeRgb">🎨 RGB Encoding</button>
+                    <button id="encodeRgb" class="active">🎨 RGB Encoding</button>
                     <button id="encodeFm">🔄 FM Encoding</button>
-                    <button id="enableRle">📉 Enable RLE</button>
+                    <button id="enableRle" class="active">📉 RLE Enabled</button>
                 </div>
 
                 <div class="status">
                     <h3>Encoding Status</h3>
-                    <div class="status-text" id="encodeStatus">Ready to encode an image.</div>
+                    <div class="status-text" id="encodeStatus">Select an image to encode.</div>
                     <div class="progress-bar">
                         <div class="progress-fill" id="encodeProgress"></div>
                     </div>
@@ -357,21 +406,25 @@
                         <input type="file" class="file-input" id="audioInput" accept="audio/*">
                         🎵 Load Audio
                     </label>
-                    <button id="decodeBtn" disabled>🔍 Decode Audio</button>
-                    <button id="realtimeBtn" disabled>🌐 Real-time Decode</button>
+                    <button id="decodeBtn" disabled>🔍 Decode Audio File</button>
+                    <button id="micBtn">🎤 Decode from Microphone</button>
                     <button id="saveImageBtn" disabled>💾 Save Image</button>
                 </div>
 
-                <div class="legacy-formats">
-                    <div>Legacy Formats:</div>
-                    <button class="format-btn">Robot 36</button>
-                    <button class="format-btn">Martin M1</button>
-                    <button class="format-btn">Scottie S2</button>
+                <div class="frequency-display">
+                    <div>Current Frequency: <span id="currentFreq">-- Hz</span></div>
+                    <div class="frequency-meter">
+                        <div class="frequency-marker" id="freqMarker"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                        <span>800 Hz</span>
+                        <span>3000 Hz</span>
+                    </div>
                 </div>
 
                 <div class="decoding-status">
                     <div class="led" id="syncLed"></div>
-                    <div id="decodeStatus">Waiting for audio...</div>
+                    <div id="decodeStatus">Ready to decode.</div>
                 </div>
 
                 <div class="status">
@@ -389,7 +442,7 @@
         </div>
 
         <div class="panel">
-            <h2>Waveform Visualization</h2>
+            <h2>Audio Visualization</h2>
             <div class="waveform">
                 <canvas id="waveformCanvas"></canvas>
             </div>
@@ -399,8 +452,8 @@
             <h3>Protocol Information</h3>
             <div class="info-grid">
                 <div class="info-item">
-                    <div class="info-label">Current Protocol</div>
-                    <div class="info-value" id="currentProtocol">WSSTV v1.0</div>
+                    <div class="info-label">Protocol Version</div>
+                    <div class="info-value" id="currentProtocol">WSSTV v2.0</div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Color Encoding</div>
@@ -412,14 +465,14 @@
                 </div>
                 <div class="info-item">
                     <div class="info-label">Pixel Rate</div>
-                    <div class="info-value" id="pixelRate">100 pixels/sec</div>
+                    <div class="info-value" id="pixelRate">67 pixels/sec</div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // WSSTV Protocol Implementation
+        // WSSTV Protocol Implementation - FIXED VERSION
         class WSSTVProtocol {
             constructor() {
                 this.audioContext = null;
@@ -427,228 +480,288 @@
                 this.isPlaying = false;
                 this.audioBuffer = null;
                 this.currentImage = null;
-                this.encodedData = null;
                 
                 // Protocol parameters
-                this.pixelDuration = 0.01; // 10ms default
-                this.resolution = 2; // 1=Low, 2=Medium, 3=High
+                this.pixelDuration = 0.015; // 15ms default
+                this.resolutionScale = 0.5; // Scale factor
                 this.useRLE = true;
                 this.colorEncoding = 'rgb'; // 'rgb', 'fm'
                 
-                // Frequency ranges (Hz)
+                // Frequency ranges (Hz) - Updated for better detection
                 this.startFreq = 1900;
                 this.syncFreq = 1200;
                 this.visFreq = 1300;
                 this.endFreq = 1500;
-                this.colorFreqRange = { min: 1500, max: 2300 };
+                this.blackFreq = 1500;
+                this.whiteFreq = 2300;
                 
-                // Metadata
-                this.version = '1.0';
-                this.headerLength = 100; // ms
+                // Sampling
+                this.sampleRate = 44100;
+                
+                // Decoding state
+                this.isDecoding = false;
+                this.micStream = null;
+                this.analyser = null;
+                this.micProcessor = null;
             }
 
             // Initialize audio context
             initAudio() {
-                if (!this.audioContext) {
-                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                if (!this.audioContext || this.audioContext.state === 'closed') {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        sampleRate: this.sampleRate
+                    });
                 }
+                return this.audioContext;
             }
 
-            // Convert image to audio
+            // Show notification
+            showNotification(message, type = 'info') {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.style.background = type === 'error' ? '#e74c3c' : 
+                                               type === 'success' ? '#27ae60' : '#3498db';
+                notification.classList.add('show');
+                setTimeout(() => notification.classList.remove('show'), 3000);
+            }
+
+            // Convert image to audio - FIXED
             async encodeImage(imageData, width, height) {
-                this.updateStatus('Encoding image to WSSTV protocol...');
+                this.updateStatus('Encoding image...');
+                this.updateProgress(0);
                 
-                // Adjust pixel duration based on resolution
-                const durationFactor = 1 / this.resolution;
-                const adjustedPixelDuration = this.pixelDuration * durationFactor;
+                const ctx = this.initAudio();
                 
-                // Calculate total duration
-                const headerDuration = 0.5; // 500ms header
-                const pixels = width * height;
-                const totalDuration = headerDuration + (pixels * adjustedPixelDuration * 
-                    (this.colorEncoding === 'rgb' ? 3 : 1));
+                // Apply resolution scaling
+                const scaledWidth = Math.floor(width * this.resolutionScale);
+                const scaledHeight = Math.floor(height * this.resolutionScale);
+                
+                // Create scaled image data
+                const scaledData = new Uint8ClampedArray(scaledWidth * scaledHeight * 4);
+                const scaleX = width / scaledWidth;
+                const scaleY = height / scaledHeight;
+                
+                for (let y = 0; y < scaledHeight; y++) {
+                    for (let x = 0; x < scaledWidth; x++) {
+                        const srcX = Math.floor(x * scaleX);
+                        const srcY = Math.floor(y * scaleY);
+                        const srcIdx = (srcY * width + srcX) * 4;
+                        const dstIdx = (y * scaledWidth + x) * 4;
+                        
+                        scaledData[dstIdx] = imageData[srcIdx];
+                        scaledData[dstIdx + 1] = imageData[srcIdx + 1];
+                        scaledData[dstIdx + 2] = imageData[srcIdx + 2];
+                        scaledData[dstIdx + 3] = 255;
+                    }
+                    this.updateProgress((y / scaledHeight) * 50);
+                }
+                
+                // Calculate durations
+                const headerDuration = 1.0; // 1 second header
+                const pixelCount = scaledWidth * scaledHeight;
+                const toneDuration = this.colorEncoding === 'rgb' ? this.pixelDuration * 3 : this.pixelDuration;
+                const dataDuration = pixelCount * toneDuration;
+                const totalDuration = headerDuration + dataDuration + 0.5; // + 0.5s for end tone
                 
                 // Create audio buffer
-                const sampleRate = this.audioContext.sampleRate;
-                const buffer = this.audioContext.createBuffer(1, 
-                    Math.ceil(totalDuration * sampleRate), sampleRate);
+                const buffer = ctx.createBuffer(1, 
+                    Math.ceil(totalDuration * this.sampleRate), this.sampleRate);
                 const channelData = buffer.getChannelData(0);
                 
-                // Generate header tones
-                this.generateHeader(channelData, sampleRate, width, height, 0);
+                let sampleIndex = 0;
+                
+                // Generate header
+                sampleIndex = this.generateHeader(channelData, sampleIndex, scaledWidth, scaledHeight);
                 
                 // Generate pixel data
-                let position = Math.ceil(headerDuration * sampleRate);
-                
-                for (let y = 0; y < height; y++) {
-                    for (let x = 0; x < width; x++) {
-                        const idx = (y * width + x) * 4;
-                        const r = imageData[idx];
-                        const g = imageData[idx + 1];
-                        const b = imageData[idx + 2];
+                let pixelIndex = 0;
+                for (let y = 0; y < scaledHeight; y++) {
+                    for (let x = 0; x < scaledWidth; x++) {
+                        const idx = (y * scaledWidth + x) * 4;
+                        const r = scaledData[idx];
+                        const g = scaledData[idx + 1];
+                        const b = scaledData[idx + 2];
                         
-                        if (this.useRLE) {
-                            // Check for run-length encoding opportunity
-                            let runLength = 1;
-                            while (x + runLength < width) {
-                                const nextIdx = (y * width + (x + runLength)) * 4;
-                                if (imageData[nextIdx] === r && 
-                                    imageData[nextIdx + 1] === g && 
-                                    imageData[nextIdx + 2] === b) {
-                                    runLength++;
-                                } else {
-                                    break;
-                                }
-                            }
+                        if (this.useRLE && x > 0) {
+                            const prevIdx = (y * scaledWidth + (x - 1)) * 4;
+                            const prevR = scaledData[prevIdx];
+                            const prevG = scaledData[prevIdx + 1];
+                            const prevB = scaledData[prevIdx + 2];
                             
-                            if (runLength > 3) {
-                                // Encode run length
-                                this.generateRunLength(channelData, sampleRate, position, runLength);
-                                position += Math.ceil(adjustedPixelDuration * sampleRate);
-                                x += runLength - 1;
-                                continue;
+                            if (r === prevR && g === prevG && b === prevB) {
+                                // Find run length
+                                let runLength = 1;
+                                while (x + runLength < scaledWidth) {
+                                    const nextIdx = (y * scaledWidth + (x + runLength)) * 4;
+                                    if (scaledData[nextIdx] === r && 
+                                        scaledData[nextIdx + 1] === g && 
+                                        scaledData[nextIdx + 2] === b) {
+                                        runLength++;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                
+                                if (runLength > 2) {
+                                    // Encode RLE
+                                    sampleIndex = this.generateRLETone(channelData, sampleIndex, runLength);
+                                    x += runLength - 1;
+                                    pixelIndex += runLength;
+                                    continue;
+                                }
                             }
                         }
                         
                         if (this.colorEncoding === 'rgb') {
-                            // RGB separate encoding
-                            this.generateTone(channelData, sampleRate, position, 
-                                this.mapColorToFreq(r), adjustedPixelDuration);
-                            position += Math.ceil(adjustedPixelDuration * sampleRate);
-                            
-                            this.generateTone(channelData, sampleRate, position, 
-                                this.mapColorToFreq(g), adjustedPixelDuration);
-                            position += Math.ceil(adjustedPixelDuration * sampleRate);
-                            
-                            this.generateTone(channelData, sampleRate, position, 
-                                this.mapColorToFreq(b), adjustedPixelDuration);
-                            position += Math.ceil(adjustedPixelDuration * sampleRate);
+                            sampleIndex = this.generateColorTone(channelData, sampleIndex, r, 'r');
+                            sampleIndex = this.generateColorTone(channelData, sampleIndex, g, 'g');
+                            sampleIndex = this.generateColorTone(channelData, sampleIndex, b, 'b');
                         } else {
-                            // FM encoding (all colors in one tone)
-                            this.generateFMTone(channelData, sampleRate, position, 
-                                r, g, b, adjustedPixelDuration);
-                            position += Math.ceil(adjustedPixelDuration * sampleRate);
+                            sampleIndex = this.generateFMTone(channelData, sampleIndex, r, g, b);
                         }
                         
+                        pixelIndex++;
+                        
                         // Update progress
-                        if ((y * width + x) % 100 === 0) {
-                            const progress = ((y * width + x) / (width * height)) * 100;
+                        if (pixelIndex % 100 === 0) {
+                            const progress = 50 + (pixelIndex / pixelCount) * 50;
                             this.updateProgress(progress);
                         }
                     }
                 }
                 
-                // Generate end tone
-                this.generateTone(channelData, sampleRate, position, this.endFreq, 0.1);
+                // End tone
+                sampleIndex = this.generateTone(channelData, sampleIndex, this.endFreq, 0.5);
                 
                 this.audioBuffer = buffer;
-                this.updateStatus(`Encoding complete! Duration: ${totalDuration.toFixed(2)}s`);
+                this.updateStatus(`Encoded ${scaledWidth}x${scaledHeight} image`);
                 this.updateProgress(100);
-                return buffer;
+                this.showNotification('Image encoded successfully!', 'success');
+                
+                return {
+                    buffer,
+                    width: scaledWidth,
+                    height: scaledHeight
+                };
             }
 
             // Generate header tones
-            generateHeader(channelData, sampleRate, width, height, startPos) {
-                // Start tone
-                this.generateTone(channelData, sampleRate, startPos, this.startFreq, 0.1);
-                let pos = startPos + Math.ceil(0.1 * sampleRate);
+            generateHeader(channelData, startIndex, width, height) {
+                let index = startIndex;
                 
-                // Sync tone
-                this.generateTone(channelData, sampleRate, pos, this.syncFreq, 0.05);
-                pos += Math.ceil(0.05 * sampleRate);
+                // Start sequence: 1900 Hz for 0.3s
+                index = this.generateTone(channelData, index, this.startFreq, 0.3);
                 
-                // VIS code for metadata
-                this.generateTone(channelData, sampleRate, pos, this.visFreq, 0.05);
-                pos += Math.ceil(0.05 * sampleRate);
+                // Sync: 1200 Hz for 0.1s
+                index = this.generateTone(channelData, index, this.syncFreq, 0.1);
                 
-                // Encode width and height
-                this.encodeNumber(channelData, sampleRate, pos, width);
-                pos += Math.ceil(0.05 * sampleRate);
+                // VIS: 1300 Hz for 0.1s
+                index = this.generateTone(channelData, index, this.visFreq, 0.1);
                 
-                this.encodeNumber(channelData, sampleRate, pos, height);
-                pos += Math.ceil(0.05 * sampleRate);
+                // Width encoding (two bytes)
+                index = this.encodeNumber(channelData, index, width);
                 
-                // Protocol version
-                this.encodeNumber(channelData, sampleRate, pos, parseInt(this.version.replace('.', '')));
+                // Height encoding (two bytes)
+                index = this.encodeNumber(channelData, index, height);
+                
+                // Encoding type: 1 for RGB, 2 for FM
+                index = this.encodeNumber(channelData, index, this.colorEncoding === 'rgb' ? 1 : 2);
+                
+                return index;
             }
 
-            // Generate a single tone
-            generateTone(channelData, sampleRate, startPos, frequency, duration) {
-                const sampleCount = Math.ceil(duration * sampleRate);
-                const angularFreq = 2 * Math.PI * frequency / sampleRate;
+            // Generate a simple tone
+            generateTone(channelData, startIndex, freq, duration) {
+                const sampleCount = Math.floor(duration * this.sampleRate);
+                const endIndex = startIndex + sampleCount;
+                const angularFreq = 2 * Math.PI * freq / this.sampleRate;
                 
                 for (let i = 0; i < sampleCount; i++) {
-                    const pos = startPos + i;
-                    if (pos < channelData.length) {
-                        // Apply envelope to avoid clicks
-                        const envelope = this.getEnvelope(i, sampleCount);
-                        channelData[pos] = Math.sin(angularFreq * i) * envelope * 0.5;
-                    }
+                    const idx = startIndex + i;
+                    if (idx >= channelData.length) break;
+                    
+                    // Apply envelope
+                    const envelope = this.getEnvelope(i, sampleCount);
+                    channelData[idx] = Math.sin(angularFreq * i) * envelope * 0.7;
                 }
+                
+                return endIndex;
             }
 
-            // Generate FM tone for color encoding
-            generateFMTone(channelData, sampleRate, startPos, r, g, b, duration) {
-                const sampleCount = Math.ceil(duration * sampleRate);
-                const baseFreq = 1500;
+            // Generate color tone
+            generateColorTone(channelData, startIndex, value, channel) {
+                const freq = this.blackFreq + (value / 255) * (this.whiteFreq - this.blackFreq);
+                return this.generateTone(channelData, startIndex, freq, this.pixelDuration);
+            }
+
+            // Generate FM tone
+            generateFMTone(channelData, startIndex, r, g, b) {
+                const duration = this.pixelDuration;
+                const sampleCount = Math.floor(duration * this.sampleRate);
+                const endIndex = startIndex + sampleCount;
                 
-                // Modulate frequency based on RGB values
-                const rMod = (r / 255) * 200;
-                const gMod = (g / 255) * 200;
-                const bMod = (b / 255) * 200;
+                // Base frequency with modulation
+                const baseFreq = 1900;
+                const rMod = (r / 255) * 100;
+                const gMod = (g / 255) * 100;
+                const bMod = (b / 255) * 100;
                 
                 for (let i = 0; i < sampleCount; i++) {
-                    const pos = startPos + i;
-                    if (pos < channelData.length) {
-                        // Combine modulations
-                        const modulation = (Math.sin(2 * Math.PI * rMod * i / sampleRate) * 0.3 +
-                                          Math.sin(2 * Math.PI * gMod * i / sampleRate) * 0.3 +
-                                          Math.sin(2 * Math.PI * bMod * i / sampleRate) * 0.3);
-                        
-                        const freq = baseFreq + modulation * 400;
-                        const angularFreq = 2 * Math.PI * freq / sampleRate;
-                        const envelope = this.getEnvelope(i, sampleCount);
-                        
-                        channelData[pos] = Math.sin(angularFreq * i) * envelope * 0.5;
-                    }
+                    const idx = startIndex + i;
+                    if (idx >= channelData.length) break;
+                    
+                    // Combined modulation
+                    const time = i / this.sampleRate;
+                    const modulation = 
+                        Math.sin(2 * Math.PI * rMod * time) * 0.3 +
+                        Math.sin(2 * Math.PI * gMod * time + Math.PI/3) * 0.3 +
+                        Math.sin(2 * Math.PI * bMod * time + 2*Math.PI/3) * 0.3;
+                    
+                    const freq = baseFreq + modulation * 400;
+                    const angularFreq = 2 * Math.PI * freq / this.sampleRate;
+                    const envelope = this.getEnvelope(i, sampleCount);
+                    
+                    channelData[idx] = Math.sin(angularFreq * i) * envelope * 0.7;
                 }
-            }
-
-            // Generate run-length encoding marker
-            generateRunLength(channelData, sampleRate, startPos, length) {
-                // Special frequency for RLE marker
-                const markerFreq = 2500;
-                const duration = 0.01;
-                this.generateTone(channelData, sampleRate, startPos, markerFreq, duration);
                 
-                // Encode length in next tone
-                const lengthFreq = 1000 + (Math.min(length, 255) * 5);
-                this.generateTone(channelData, sampleRate, startPos + Math.ceil(duration * sampleRate), 
-                                lengthFreq, duration);
+                return endIndex;
             }
 
-            // Map color value to frequency
-            mapColorToFreq(value) {
-                return this.colorFreqRange.min + 
-                       (value / 255) * (this.colorFreqRange.max - this.colorFreqRange.min);
-            }
-
-            // Encode a number as tone sequence
-            encodeNumber(channelData, sampleRate, startPos, number) {
-                const digits = number.toString().split('').map(Number);
-                let pos = startPos;
+            // Generate RLE tone
+            generateRLETone(channelData, startIndex, length) {
+                // RLE marker: 2500 Hz for 0.02s
+                let index = this.generateTone(channelData, startIndex, 2500, 0.02);
                 
-                for (const digit of digits) {
-                    const freq = 1000 + (digit * 100);
-                    this.generateTone(channelData, sampleRate, pos, freq, 0.02);
-                    pos += Math.ceil(0.02 * sampleRate);
-                }
+                // Length encoded as frequency: 1000 + length * 10 Hz
+                const lengthFreq = 1000 + Math.min(length, 100) * 10;
+                index = this.generateTone(channelData, index, lengthFreq, 0.02);
+                
+                return index;
+            }
+
+            // Encode number as dual-tone sequence
+            encodeNumber(channelData, startIndex, number) {
+                // Split into two bytes
+                const byte1 = (number >> 8) & 0xFF;
+                const byte2 = number & 0xFF;
+                
+                let index = startIndex;
+                
+                // First byte: 800 + byte * 8.6 Hz
+                const freq1 = 800 + byte1 * 8.6;
+                index = this.generateTone(channelData, index, freq1, 0.05);
+                
+                // Second byte
+                const freq2 = 800 + byte2 * 8.6;
+                index = this.generateTone(channelData, index, freq2, 0.05);
+                
+                return index;
             }
 
             // Get envelope for smooth transitions
             getEnvelope(sampleIndex, totalSamples) {
-                const attack = totalSamples * 0.1;
-                const release = totalSamples * 0.1;
+                const attack = Math.min(totalSamples * 0.1, 100);
+                const release = Math.min(totalSamples * 0.1, 100);
                 
                 if (sampleIndex < attack) {
                     return sampleIndex / attack;
@@ -658,89 +771,109 @@
                 return 1;
             }
 
-            // Decode audio to image
+            // Decode audio to image - FIXED
             async decodeAudio(audioBuffer) {
-                this.updateDecodeStatus('Analyzing audio...');
+                this.updateDecodeStatus('Starting audio analysis...');
+                this.updateDecodeProgress(0);
                 this.setSyncLed(false);
                 
-                const sampleRate = audioBuffer.sampleRate;
+                const ctx = this.initAudio();
                 const channelData = audioBuffer.getChannelData(0);
                 
-                // Detect start tone
-                const startPos = this.detectStartTone(channelData, sampleRate);
+                // Detect start of transmission
+                const startPos = this.findStartOfSignal(channelData);
                 if (startPos === -1) {
-                    throw new Error('No WSSTV signal detected');
+                    throw new Error('No valid WSSTV signal found');
                 }
                 
                 this.updateDecodeStatus('Signal detected, decoding metadata...');
                 this.setSyncLed(true);
                 
                 // Decode metadata
-                let pos = startPos + Math.ceil(0.1 * sampleRate); // Skip start tone
-                pos += Math.ceil(0.05 * sampleRate); // Skip sync tone
-                pos += Math.ceil(0.05 * sampleRate); // Skip VIS tone
+                let pos = startPos;
                 
-                const width = this.decodeNumber(channelData, sampleRate, pos);
-                pos += Math.ceil(0.05 * sampleRate);
+                // Skip start tone (we already detected it)
+                pos += Math.floor(0.3 * this.sampleRate);
                 
-                const height = this.decodeNumber(channelData, sampleRate, pos);
-                pos += Math.ceil(0.05 * sampleRate);
+                // Skip sync tone
+                pos += Math.floor(0.1 * this.sampleRate);
                 
-                this.updateDecodeStatus(`Image size: ${width}x${height}`);
+                // Skip VIS tone
+                pos += Math.floor(0.1 * this.sampleRate);
+                
+                // Decode width and height
+                const width = this.decodeNumber(channelData, pos);
+                pos += Math.floor(0.1 * this.sampleRate);
+                
+                const height = this.decodeNumber(channelData, pos);
+                pos += Math.floor(0.1 * this.sampleRate);
+                
+                // Decode encoding type
+                const encodingType = this.decodeNumber(channelData, pos);
+                pos += Math.floor(0.1 * this.sampleRate);
+                
+                this.colorEncoding = encodingType === 1 ? 'rgb' : 'fm';
+                
+                this.updateDecodeStatus(`Decoding ${width}x${height} image (${this.colorEncoding})`);
+                this.updateDecodeInfo(`Width: ${width}, Height: ${height}, Encoding: ${this.colorEncoding}`);
                 
                 // Create image buffer
                 const imageData = new Uint8ClampedArray(width * height * 4);
+                let pixelIndex = 0;
+                const samplesPerPixel = Math.floor(this.pixelDuration * this.sampleRate);
                 
                 // Decode pixel data
-                let pixelIndex = 0;
-                const samplesPerPixel = Math.ceil(this.pixelDuration * sampleRate);
-                
                 for (let y = 0; y < height; y++) {
                     for (let x = 0; x < width; x++) {
-                        if (pixelIndex * 4 >= imageData.length) break;
+                        if (pixelIndex >= width * height) break;
                         
+                        // Check for RLE
+                        const rleCheck = this.checkForRLE(channelData, pos);
+                        if (rleCheck.isRLE) {
+                            pos = rleCheck.newPos;
+                            const runLength = rleCheck.length;
+                            const colors = rleCheck.colors;
+                            
+                            for (let i = 0; i < runLength; i++) {
+                                if (pixelIndex < width * height) {
+                                    const idx = pixelIndex * 4;
+                                    imageData[idx] = colors.r;
+                                    imageData[idx + 1] = colors.g;
+                                    imageData[idx + 2] = colors.b;
+                                    imageData[idx + 3] = 255;
+                                    pixelIndex++;
+                                }
+                            }
+                            x += runLength - 1;
+                            continue;
+                        }
+                        
+                        // Decode normal pixel
                         let r, g, b;
                         
                         if (this.colorEncoding === 'rgb') {
-                            // RGB separate decoding
-                            r = this.decodeColorTone(channelData, sampleRate, pos);
+                            r = this.decodeColorValue(channelData, pos);
                             pos += samplesPerPixel;
-                            g = this.decodeColorTone(channelData, sampleRate, pos);
+                            
+                            g = this.decodeColorValue(channelData, pos);
                             pos += samplesPerPixel;
-                            b = this.decodeColorTone(channelData, sampleRate, pos);
+                            
+                            b = this.decodeColorValue(channelData, pos);
                             pos += samplesPerPixel;
                         } else {
-                            // FM decoding
-                            const colors = this.decodeFMTone(channelData, sampleRate, pos, samplesPerPixel);
+                            const colors = this.decodeFMColors(channelData, pos, samplesPerPixel);
                             r = colors.r;
                             g = colors.g;
                             b = colors.b;
                             pos += samplesPerPixel;
                         }
                         
-                        // Check for RLE
-                        if (this.useRLE) {
-                            const rleInfo = this.detectRLE(channelData, sampleRate, pos - samplesPerPixel);
-                            if (rleInfo.isRLE) {
-                                const runLength = rleInfo.length;
-                                for (let i = 0; i < runLength; i++) {
-                                    if (pixelIndex * 4 < imageData.length) {
-                                        imageData[pixelIndex * 4] = r;
-                                        imageData[pixelIndex * 4 + 1] = g;
-                                        imageData[pixelIndex * 4 + 2] = b;
-                                        imageData[pixelIndex * 4 + 3] = 255;
-                                        pixelIndex++;
-                                    }
-                                }
-                                x += runLength - 1;
-                                continue;
-                            }
-                        }
+                        const idx = pixelIndex * 4;
+                        imageData[idx] = r;
+                        imageData[idx + 1] = g;
+                        imageData[idx + 2] = b;
+                        imageData[idx + 3] = 255;
                         
-                        imageData[pixelIndex * 4] = r;
-                        imageData[pixelIndex * 4 + 1] = g;
-                        imageData[pixelIndex * 4 + 2] = b;
-                        imageData[pixelIndex * 4 + 3] = 255;
                         pixelIndex++;
                         
                         // Update progress
@@ -748,123 +881,368 @@
                             const progress = (pixelIndex / (width * height)) * 100;
                             this.updateDecodeProgress(progress);
                         }
+                        
+                        // Check if we've reached end of data
+                        if (pos >= channelData.length - samplesPerPixel) {
+                            break;
+                        }
                     }
                 }
                 
                 this.updateDecodeStatus('Decoding complete!');
                 this.updateDecodeProgress(100);
+                this.showNotification('Image decoded successfully!', 'success');
                 
-                return { imageData, width, height };
-            }
-
-            // Detect start tone
-            detectStartTone(channelData, sampleRate) {
-                const windowSize = Math.ceil(0.05 * sampleRate);
-                
-                for (let i = 0; i < channelData.length - windowSize; i += windowSize) {
-                    const segment = channelData.slice(i, i + windowSize);
-                    const dominantFreq = this.getDominantFrequency(segment, sampleRate);
-                    
-                    if (Math.abs(dominantFreq - this.startFreq) < 50) {
-                        return i;
-                    }
-                }
-                return -1;
-            }
-
-            // Get dominant frequency using FFT
-            getDominantFrequency(samples, sampleRate) {
-                // Simplified frequency detection
-                let maxAmplitude = 0;
-                let maxFreq = 0;
-                
-                for (let freq = 500; freq <= 3000; freq += 50) {
-                    let amplitude = 0;
-                    const angularFreq = 2 * Math.PI * freq / sampleRate;
-                    
-                    for (let i = 0; i < samples.length; i++) {
-                        amplitude += samples[i] * Math.cos(angularFreq * i);
-                    }
-                    
-                    amplitude = Math.abs(amplitude) / samples.length;
-                    
-                    if (amplitude > maxAmplitude) {
-                        maxAmplitude = amplitude;
-                        maxFreq = freq;
-                    }
-                }
-                
-                return maxFreq;
-            }
-
-            // Decode number from tones
-            decodeNumber(channelData, sampleRate, startPos) {
-                let number = 0;
-                let pos = startPos;
-                
-                for (let i = 0; i < 4; i++) {
-                    const segment = channelData.slice(pos, pos + Math.ceil(0.02 * sampleRate));
-                    const freq = this.getDominantFrequency(segment, sampleRate);
-                    const digit = Math.round((freq - 1000) / 100);
-                    
-                    if (digit >= 0 && digit <= 9) {
-                        number = number * 10 + digit;
-                    }
-                    pos += Math.ceil(0.02 * sampleRate);
-                }
-                
-                return number;
-            }
-
-            // Decode color from tone
-            decodeColorTone(channelData, sampleRate, startPos) {
-                const segment = channelData.slice(startPos, startPos + Math.ceil(0.01 * sampleRate));
-                const freq = this.getDominantFrequency(segment, sampleRate);
-                
-                // Map frequency back to color value
-                return Math.round(((freq - this.colorFreqRange.min) / 
-                                 (this.colorFreqRange.max - this.colorFreqRange.min)) * 255);
-            }
-
-            // Decode FM tone
-            decodeFMTone(channelData, sampleRate, startPos, length) {
-                const segment = channelData.slice(startPos, startPos + length);
-                
-                // Simplified FM decoding
-                let r = 0, g = 0, b = 0;
-                
-                // Analyze frequency variations
-                for (let i = 0; i < segment.length; i++) {
-                    const sample = segment[i];
-                    r += Math.abs(sample * Math.sin(2 * Math.PI * 50 * i / sampleRate));
-                    g += Math.abs(sample * Math.sin(2 * Math.PI * 100 * i / sampleRate));
-                    b += Math.abs(sample * Math.sin(2 * Math.PI * 150 * i / sampleRate));
-                }
-                
-                // Normalize
-                const scale = 255 / Math.max(r, g, b);
                 return {
-                    r: Math.round(r * scale),
-                    g: Math.round(g * scale),
-                    b: Math.round(b * scale)
+                    imageData,
+                    width,
+                    height
                 };
             }
 
-            // Detect RLE marker
-            detectRLE(channelData, sampleRate, pos) {
-                const markerSegment = channelData.slice(pos, pos + Math.ceil(0.01 * sampleRate));
-                const markerFreq = this.getDominantFrequency(markerSegment, sampleRate);
+            // Find start of signal using Goertzel algorithm
+            findStartOfSignal(channelData) {
+                const blockSize = Math.floor(0.05 * this.sampleRate); // 50ms blocks
                 
-                if (Math.abs(markerFreq - 2500) < 100) {
-                    const lengthSegment = channelData.slice(pos + Math.ceil(0.01 * sampleRate), 
-                                                          pos + Math.ceil(0.02 * sampleRate));
-                    const lengthFreq = this.getDominantFrequency(lengthSegment, sampleRate);
-                    const length = Math.round((lengthFreq - 1000) / 5);
+                for (let i = 0; i < channelData.length - blockSize; i += blockSize / 2) {
+                    const block = channelData.slice(i, i + blockSize);
+                    const amplitude = this.goertzel(block, this.startFreq, this.sampleRate);
                     
-                    return { isRLE: true, length: Math.min(length, 255) };
+                    if (amplitude > 0.3) { // Threshold for detection
+                        return i;
+                    }
                 }
                 
-                return { isRLE: false, length: 0 };
+                return -1;
+            }
+
+            // Goertzel algorithm for frequency detection
+            goertzel(samples, targetFreq, sampleRate) {
+                const omega = 2 * Math.PI * targetFreq / sampleRate;
+                const coeff = 2 * Math.cos(omega);
+                
+                let q0 = 0, q1 = 0, q2 = 0;
+                
+                for (let i = 0; i < samples.length; i++) {
+                    q0 = coeff * q1 - q2 + samples[i];
+                    q2 = q1;
+                    q1 = q0;
+                }
+                
+                const real = q1 - q2 * Math.cos(omega);
+                const imag = q2 * Math.sin(omega);
+                
+                return Math.sqrt(real * real + imag * imag) / samples.length;
+            }
+
+            // Decode number from dual-tone
+            decodeNumber(channelData, pos) {
+                const blockSize = Math.floor(0.05 * this.sampleRate);
+                
+                // Decode first byte
+                const block1 = channelData.slice(pos, pos + blockSize);
+                let maxAmplitude = 0;
+                let byteValue = 0;
+                
+                for (let freq = 800; freq <= 800 + 255 * 8.6; freq += 8.6) {
+                    const amplitude = this.goertzel(block1, freq, this.sampleRate);
+                    if (amplitude > maxAmplitude) {
+                        maxAmplitude = amplitude;
+                        byteValue = Math.round((freq - 800) / 8.6);
+                    }
+                }
+                
+                let number = byteValue << 8;
+                
+                // Decode second byte
+                const block2 = channelData.slice(pos + blockSize, pos + blockSize * 2);
+                maxAmplitude = 0;
+                byteValue = 0;
+                
+                for (let freq = 800; freq <= 800 + 255 * 8.6; freq += 8.6) {
+                    const amplitude = this.goertzel(block2, freq, this.sampleRate);
+                    if (amplitude > maxAmplitude) {
+                        maxAmplitude = amplitude;
+                        byteValue = Math.round((freq - 800) / 8.6);
+                    }
+                }
+                
+                number |= byteValue;
+                return number;
+            }
+
+            // Decode color value from tone
+            decodeColorValue(channelData, pos) {
+                const blockSize = Math.floor(this.pixelDuration * this.sampleRate);
+                const block = channelData.slice(pos, pos + blockSize);
+                
+                let maxAmplitude = 0;
+                let bestValue = 0;
+                
+                // Scan frequencies from black to white
+                for (let freq = this.blackFreq; freq <= this.whiteFreq; freq += 10) {
+                    const amplitude = this.goertzel(block, freq, this.sampleRate);
+                    if (amplitude > maxAmplitude) {
+                        maxAmplitude = amplitude;
+                        bestValue = Math.round(((freq - this.blackFreq) / (this.whiteFreq - this.blackFreq)) * 255);
+                    }
+                }
+                
+                return Math.max(0, Math.min(255, bestValue));
+            }
+
+            // Decode FM colors
+            decodeFMColors(channelData, pos, blockSize) {
+                const block = channelData.slice(pos, pos + blockSize);
+                
+                // Simple demodulation - in practice would need proper FM demodulation
+                let rEnergy = 0, gEnergy = 0, bEnergy = 0;
+                
+                for (let i = 0; i < block.length; i++) {
+                    const time = i / this.sampleRate;
+                    rEnergy += Math.abs(block[i] * Math.sin(2 * Math.PI * 50 * time));
+                    gEnergy += Math.abs(block[i] * Math.sin(2 * Math.PI * 100 * time));
+                    bEnergy += Math.abs(block[i] * Math.sin(2 * Math.PI * 150 * time));
+                }
+                
+                const maxEnergy = Math.max(rEnergy, gEnergy, bEnergy);
+                return {
+                    r: Math.round((rEnergy / maxEnergy) * 255),
+                    g: Math.round((gEnergy / maxEnergy) * 255),
+                    b: Math.round((bEnergy / maxEnergy) * 255)
+                };
+            }
+
+            // Check for RLE marker
+            checkForRLE(channelData, pos) {
+                const markerSize = Math.floor(0.02 * this.sampleRate);
+                
+                // Check for RLE marker (2500 Hz)
+                const markerBlock = channelData.slice(pos, pos + markerSize);
+                const markerAmp = this.goertzel(markerBlock, 2500, this.sampleRate);
+                
+                if (markerAmp > 0.2) {
+                    // Decode length
+                    const lengthBlock = channelData.slice(pos + markerSize, pos + markerSize * 2);
+                    let maxAmp = 0;
+                    let length = 0;
+                    
+                    for (let freq = 1000; freq <= 2000; freq += 10) {
+                        const amp = this.goertzel(lengthBlock, freq, this.sampleRate);
+                        if (amp > maxAmp) {
+                            maxAmp = amp;
+                            length = Math.round((freq - 1000) / 10);
+                        }
+                    }
+                    
+                    // Get colors from next pixel (after RLE marker)
+                    const colorPos = pos + markerSize * 2;
+                    let colors = { r: 128, g: 128, b: 128 };
+                    
+                    // Try to decode colors (simplified)
+                    if (this.colorEncoding === 'rgb') {
+                        colors.r = this.decodeColorValue(channelData, colorPos);
+                        colors.g = this.decodeColorValue(channelData, colorPos + Math.floor(this.pixelDuration * this.sampleRate));
+                        colors.b = this.decodeColorValue(channelData, colorPos + Math.floor(this.pixelDuration * 2 * this.sampleRate));
+                    }
+                    
+                    return {
+                        isRLE: true,
+                        length: length,
+                        colors: colors,
+                        newPos: colorPos + (this.colorEncoding === 'rgb' ? 
+                            Math.floor(this.pixelDuration * 3 * this.sampleRate) : 
+                            Math.floor(this.pixelDuration * this.sampleRate))
+                    };
+                }
+                
+                return { isRLE: false };
+            }
+
+            // Start microphone decoding
+            async startMicrophoneDecoding() {
+                try {
+                    this.initAudio();
+                    
+                    // Request microphone access
+                    this.micStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false,
+                            sampleRate: this.sampleRate
+                        } 
+                    });
+                    
+                    // Create audio processing
+                    const source = this.audioContext.createMediaStreamSource(this.micStream);
+                    this.analyser = this.audioContext.createAnalyser();
+                    this.analyser.fftSize = 2048;
+                    this.analyser.smoothingTimeConstant = 0.8;
+                    
+                    // Create processor for real-time analysis
+                    this.micProcessor = this.audioContext.createScriptProcessor(4096, 1, 1);
+                    
+                    const buffer = new Float32Array(4096);
+                    let bufferPos = 0;
+                    const fullBufferSize = this.sampleRate * 10; // 10 seconds buffer
+                    const fullBuffer = new Float32Array(fullBufferSize);
+                    
+                    this.micProcessor.onaudioprocess = (event) => {
+                        const input = event.inputBuffer.getChannelData(0);
+                        
+                        // Update frequency display
+                        this.updateFrequencyDisplay(input);
+                        
+                        // Fill buffer
+                        for (let i = 0; i < input.length; i++) {
+                            fullBuffer[bufferPos] = input[i];
+                            bufferPos = (bufferPos + 1) % fullBufferSize;
+                        }
+                        
+                        // Try to detect signal
+                        this.detectSignalInBuffer(fullBuffer, bufferPos);
+                    };
+                    
+                    source.connect(this.analyser);
+                    this.analyser.connect(this.micProcessor);
+                    this.micProcessor.connect(this.audioContext.destination);
+                    
+                    this.updateDecodeStatus('Microphone active - listening for WSSTV signal...');
+                    this.setSyncLed(true, true);
+                    this.showNotification('Microphone activated. Listening for SSTV signals...', 'success');
+                    
+                } catch (error) {
+                    console.error('Microphone error:', error);
+                    this.showNotification('Microphone access denied or failed.', 'error');
+                }
+            }
+
+            // Stop microphone decoding
+            stopMicrophoneDecoding() {
+                if (this.micStream) {
+                    this.micStream.getTracks().forEach(track => track.stop());
+                    this.micStream = null;
+                }
+                if (this.micProcessor) {
+                    this.micProcessor.disconnect();
+                    this.micProcessor = null;
+                }
+                this.setSyncLed(false);
+                this.updateDecodeStatus('Microphone stopped.');
+            }
+
+            // Update frequency display
+            updateFrequencyDisplay(data) {
+                const freqData = new Uint8Array(this.analyser.frequencyBinCount);
+                this.analyser.getByteFrequencyData(freqData);
+                
+                // Find dominant frequency
+                let maxIndex = 0;
+                let maxValue = 0;
+                
+                for (let i = 0; i < freqData.length; i++) {
+                    if (freqData[i] > maxValue) {
+                        maxValue = freqData[i];
+                        maxIndex = i;
+                    }
+                }
+                
+                const freq = maxIndex * this.audioContext.sampleRate / this.analyser.fftSize;
+                
+                // Update display
+                document.getElementById('currentFreq').textContent = Math.round(freq) + ' Hz';
+                
+                // Update marker position
+                const marker = document.getElementById('freqMarker');
+                const percentage = ((freq - 800) / (3000 - 800)) * 100;
+                marker.style.left = Math.min(100, Math.max(0, percentage)) + '%';
+            }
+
+            // Detect signal in microphone buffer
+            detectSignalInBuffer(buffer, position) {
+                // Simple signal detection - look for start frequency
+                const windowSize = Math.floor(0.05 * this.sampleRate);
+                const samples = [];
+                
+                // Get recent samples
+                for (let i = 0; i < windowSize; i++) {
+                    const idx = (position - windowSize + i + buffer.length) % buffer.length;
+                    samples.push(buffer[idx]);
+                }
+                
+                const amplitude = this.goertzel(samples, this.startFreq, this.sampleRate);
+                
+                if (amplitude > 0.25) {
+                    this.showNotification('WSSTV signal detected!', 'success');
+                    this.updateDecodeStatus('Signal detected - decoding...');
+                    
+                    // Extract the complete signal
+                    this.extractAndDecodeSignal(buffer, position);
+                }
+            }
+
+            // Extract and decode signal from buffer
+            extractAndDecodeSignal(buffer, position) {
+                // Stop listening
+                this.stopMicrophoneDecoding();
+                
+                // Find start position
+                let startPos = -1;
+                const searchWindow = Math.floor(2 * this.sampleRate); // Search last 2 seconds
+                
+                for (let i = 0; i < searchWindow; i++) {
+                    const idx = (position - i + buffer.length) % buffer.length;
+                    const windowStart = Math.max(0, idx - Math.floor(0.05 * this.sampleRate));
+                    const samples = [];
+                    
+                    for (let j = 0; j < Math.floor(0.05 * this.sampleRate); j++) {
+                        const sampleIdx = (windowStart + j) % buffer.length;
+                        samples.push(buffer[sampleIdx]);
+                    }
+                    
+                    const amplitude = this.goertzel(samples, this.startFreq, this.sampleRate);
+                    if (amplitude > 0.25) {
+                        startPos = windowStart;
+                        break;
+                    }
+                }
+                
+                if (startPos !== -1) {
+                    // Extract signal (estimate 10 seconds max)
+                    const maxSignalLength = Math.floor(10 * this.sampleRate);
+                    const extracted = new Float32Array(maxSignalLength);
+                    
+                    for (let i = 0; i < maxSignalLength; i++) {
+                        const idx = (startPos + i) % buffer.length;
+                        extracted[i] = buffer[idx];
+                    }
+                    
+                    // Create AudioBuffer and decode
+                    const audioBuffer = this.audioContext.createBuffer(1, extracted.length, this.sampleRate);
+                    audioBuffer.getChannelData(0).set(extracted);
+                    
+                    // Decode
+                    this.decodeAudio(audioBuffer).then(result => {
+                        // Display result
+                        this.displayDecodedImage(result);
+                    }).catch(error => {
+                        this.showNotification('Decoding failed: ' + error.message, 'error');
+                    });
+                }
+            }
+
+            // Display decoded image
+            displayDecodedImage(result) {
+                const canvas = document.getElementById('decodedImage');
+                const ctx = canvas.getContext('2d');
+                const imageData = new ImageData(result.imageData, result.width, result.height);
+                
+                canvas.width = result.width;
+                canvas.height = result.height;
+                ctx.putImageData(imageData, 0, 0);
+                
+                document.getElementById('saveImageBtn').disabled = false;
             }
 
             // Play audio
@@ -879,12 +1257,13 @@
                 
                 this.sourceNode.onended = () => {
                     this.isPlaying = false;
-                    this.updatePlaybackStatus('Stopped');
+                    this.updatePlaybackStatus();
                 };
                 
                 this.sourceNode.start();
                 this.isPlaying = true;
-                this.updatePlaybackStatus('Playing...');
+                this.updatePlaybackStatus();
+                this.showNotification('Playing encoded audio...', 'success');
             }
 
             // Stop audio
@@ -895,7 +1274,7 @@
                     this.sourceNode = null;
                 }
                 this.isPlaying = false;
-                this.updatePlaybackStatus('Stopped');
+                this.updatePlaybackStatus();
             }
 
             // Save audio as WAV file
@@ -911,6 +1290,8 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
+                
+                this.showNotification('Audio saved as WAV file.', 'success');
             }
 
             // Convert AudioBuffer to WAV
@@ -922,35 +1303,38 @@
                 
                 const bytesPerSample = bitDepth / 8;
                 const blockAlign = numChannels * bytesPerSample;
+                const byteRate = sampleRate * blockAlign;
+                const dataSize = buffer.length * blockAlign;
                 
-                const wavData = new DataView(new ArrayBuffer(44 + buffer.length * blockAlign));
+                const bufferArray = new ArrayBuffer(44 + dataSize);
+                const view = new DataView(bufferArray);
                 
                 // Write WAV header
-                this.writeString(wavData, 0, 'RIFF');
-                wavData.setUint32(4, 36 + buffer.length * blockAlign, true);
-                this.writeString(wavData, 8, 'WAVE');
-                this.writeString(wavData, 12, 'fmt ');
-                wavData.setUint32(16, 16, true);
-                wavData.setUint16(20, format, true);
-                wavData.setUint16(22, numChannels, true);
-                wavData.setUint32(24, sampleRate, true);
-                wavData.setUint32(28, sampleRate * blockAlign, true);
-                wavData.setUint16(32, blockAlign, true);
-                wavData.setUint16(34, bitDepth, true);
-                this.writeString(wavData, 36, 'data');
-                wavData.setUint32(40, buffer.length * blockAlign, true);
+                this.writeString(view, 0, 'RIFF');
+                view.setUint32(4, 36 + dataSize, true);
+                this.writeString(view, 8, 'WAVE');
+                this.writeString(view, 12, 'fmt ');
+                view.setUint32(16, 16, true);
+                view.setUint16(20, format, true);
+                view.setUint16(22, numChannels, true);
+                view.setUint32(24, sampleRate, true);
+                view.setUint32(28, byteRate, true);
+                view.setUint16(32, blockAlign, true);
+                view.setUint16(34, bitDepth, true);
+                this.writeString(view, 36, 'data');
+                view.setUint32(40, dataSize, true);
                 
                 // Write audio data
                 let offset = 44;
                 for (let i = 0; i < buffer.length; i++) {
                     for (let channel = 0; channel < numChannels; channel++) {
                         const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
-                        wavData.setInt16(offset, sample * 0x7FFF, true);
+                        view.setInt16(offset, sample * 0x7FFF, true);
                         offset += 2;
                     }
                 }
                 
-                return wavData;
+                return bufferArray;
             }
 
             writeString(view, offset, string) {
@@ -980,19 +1364,20 @@
                 document.getElementById('decodeInfo').textContent = text;
             }
 
-            updatePlaybackStatus(text) {
+            updatePlaybackStatus() {
                 const btn = document.getElementById('playBtn');
                 btn.innerHTML = this.isPlaying ? '⏸️ Pause' : '▶️ Play';
-                btn.disabled = !this.audioBuffer;
             }
 
-            setSyncLed(active) {
-                document.getElementById('syncLed').classList.toggle('active', active);
+            setSyncLed(active, isRecording = false) {
+                const led = document.getElementById('syncLed');
+                led.classList.toggle('active', active && !isRecording);
+                led.classList.toggle('recording', isRecording);
             }
 
             updateProtocolInfo() {
                 document.getElementById('pixelRate').textContent = 
-                    `${Math.round(1000 / (this.pixelDuration * 1000))} pixels/sec`;
+                    `${Math.round(1000 / this.pixelDuration)} pixels/sec`;
                 document.getElementById('colorEncoding').textContent = 
                     this.colorEncoding === 'rgb' ? 'RGB Separate' : 'FM Encoding';
                 document.getElementById('compressionStatus').textContent = 
@@ -1004,6 +1389,7 @@
         class WSSTVApp {
             constructor() {
                 this.protocol = new WSSTVProtocol();
+                this.isMicActive = false;
                 this.init();
             }
 
@@ -1020,8 +1406,8 @@
                 });
 
                 // Encoding
-                document.getElementById('encodeBtn').addEventListener('click', () => {
-                    this.encodeCurrentImage();
+                document.getElementById('encodeBtn').addEventListener('click', async () => {
+                    await this.encodeCurrentImage();
                 });
 
                 // Playback
@@ -1052,27 +1438,30 @@
                 });
 
                 document.getElementById('resolution').addEventListener('input', (e) => {
-                    this.protocol.resolution = parseInt(e.target.value);
-                    const resolutions = ['Low', 'Medium', 'High'];
-                    document.getElementById('resolutionValue').textContent = resolutions[e.target.value - 1];
-                    this.protocol.updateProtocolInfo();
+                    this.protocol.resolutionScale = e.target.value / 10;
+                    document.getElementById('resolutionValue').textContent = this.protocol.resolutionScale.toFixed(1);
                 });
 
                 // Encoding modes
-                document.getElementById('encodeRgb').addEventListener('click', () => {
+                document.getElementById('encodeRgb').addEventListener('click', (e) => {
                     this.protocol.colorEncoding = 'rgb';
                     document.getElementById('colorEncoding').textContent = 'RGB Separate';
+                    e.target.classList.add('active');
+                    document.getElementById('encodeFm').classList.remove('active');
                 });
 
-                document.getElementById('encodeFm').addEventListener('click', () => {
+                document.getElementById('encodeFm').addEventListener('click', (e) => {
                     this.protocol.colorEncoding = 'fm';
                     document.getElementById('colorEncoding').textContent = 'FM Encoding';
+                    e.target.classList.add('active');
+                    document.getElementById('encodeRgb').classList.remove('active');
                 });
 
                 document.getElementById('enableRle').addEventListener('click', (e) => {
                     this.protocol.useRLE = !this.protocol.useRLE;
                     e.target.textContent = this.protocol.useRLE ? 
-                        '📉 Enable RLE' : '📈 Disable RLE';
+                        '📉 RLE Enabled' : '📈 RLE Disabled';
+                    e.target.classList.toggle('active', this.protocol.useRLE);
                     this.protocol.updateProtocolInfo();
                 });
 
@@ -1082,8 +1471,21 @@
                 });
 
                 // Decoding
-                document.getElementById('decodeBtn').addEventListener('click', () => {
-                    this.decodeAudio();
+                document.getElementById('decodeBtn').addEventListener('click', async () => {
+                    await this.decodeAudioFile();
+                });
+
+                // Microphone decoding
+                document.getElementById('micBtn').addEventListener('click', () => {
+                    if (this.isMicActive) {
+                        this.protocol.stopMicrophoneDecoding();
+                        this.isMicActive = false;
+                        document.getElementById('micBtn').innerHTML = '🎤 Decode from Microphone';
+                    } else {
+                        this.protocol.startMicrophoneDecoding();
+                        this.isMicActive = true;
+                        document.getElementById('micBtn').innerHTML = '⏹️ Stop Microphone';
+                    }
                 });
 
                 // Save image
@@ -1113,60 +1515,63 @@
             async loadImage(file) {
                 if (!file) return;
                 
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        
-                        // Resize if too large
-                        const maxSize = 400;
-                        let width = img.width;
-                        let height = img.height;
-                        
-                        if (width > maxSize || height > maxSize) {
-                            const ratio = Math.min(maxSize / width, maxSize / height);
-                            width = Math.floor(width * ratio);
-                            height = Math.floor(height * ratio);
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-                        ctx.drawImage(img, 0, 0, width, height);
-                        
-                        this.protocol.currentImage = {
-                            data: ctx.getImageData(0, 0, width, height),
-                            width,
-                            height
+                try {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            
+                            // Limit size for performance
+                            const maxSize = 400;
+                            let width = img.width;
+                            let height = img.height;
+                            
+                            if (width > maxSize || height > maxSize) {
+                                const ratio = Math.min(maxSize / width, maxSize / height);
+                                width = Math.floor(width * ratio);
+                                height = Math.floor(height * ratio);
+                            }
+                            
+                            canvas.width = width;
+                            canvas.height = height;
+                            ctx.drawImage(img, 0, 0, width, height);
+                            
+                            this.protocol.currentImage = {
+                                data: ctx.getImageData(0, 0, width, height),
+                                width,
+                                height
+                            };
+                            
+                            // Display image
+                            document.getElementById('sourceImage').src = e.target.result;
+                            document.getElementById('sourceImage').style.display = 'block';
+                            document.getElementById('noImageText').style.display = 'none';
+                            
+                            // Enable encode button
+                            document.getElementById('encodeBtn').disabled = false;
+                            
+                            this.protocol.updateStatus(`Image loaded: ${width}x${height}`);
+                            this.protocol.showNotification('Image loaded successfully!', 'success');
                         };
-                        
-                        // Display image
-                        document.getElementById('sourceImage').src = e.target.result;
-                        document.getElementById('sourceImage').style.display = 'block';
-                        document.getElementById('noImageText').style.display = 'none';
-                        
-                        // Enable encode button
-                        document.getElementById('encodeBtn').disabled = false;
-                        
-                        this.protocol.updateStatus(`Image loaded: ${width}x${height}`);
+                        img.src = e.target.result;
                     };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
+                    reader.readAsDataURL(file);
+                } catch (error) {
+                    this.protocol.showNotification('Error loading image: ' + error.message, 'error');
+                }
             }
 
             async encodeCurrentImage() {
                 if (!this.protocol.currentImage) {
-                    alert('Please select an image first!');
+                    this.protocol.showNotification('Please select an image first!', 'error');
                     return;
                 }
                 
                 try {
-                    this.protocol.initAudio();
-                    
                     const { data, width, height } = this.protocol.currentImage;
-                    const audioBuffer = await this.protocol.encodeImage(data, width, height);
+                    const result = await this.protocol.encodeImage(data, width, height);
                     
                     // Enable playback controls
                     document.getElementById('playBtn').disabled = false;
@@ -1174,11 +1579,12 @@
                     document.getElementById('saveBtn').disabled = false;
                     
                     // Draw waveform
-                    this.drawWaveform(audioBuffer);
+                    this.drawWaveform(result.buffer);
                     
                 } catch (error) {
                     console.error('Encoding error:', error);
                     this.protocol.updateStatus(`Error: ${error.message}`);
+                    this.protocol.showNotification('Encoding failed: ' + error.message, 'error');
                 }
             }
 
@@ -1192,20 +1598,21 @@
                     
                     this.protocol.audioBuffer = audioBuffer;
                     document.getElementById('decodeBtn').disabled = false;
-                    document.getElementById('realtimeBtn').disabled = false;
                     
                     this.protocol.updateDecodeStatus(`Audio loaded: ${audioBuffer.duration.toFixed(2)}s`);
                     this.drawWaveform(audioBuffer);
+                    this.protocol.showNotification('Audio file loaded successfully!', 'success');
                     
                 } catch (error) {
                     console.error('Audio loading error:', error);
                     this.protocol.updateDecodeStatus(`Error: ${error.message}`);
+                    this.protocol.showNotification('Error loading audio: ' + error.message, 'error');
                 }
             }
 
-            async decodeAudio() {
+            async decodeAudioFile() {
                 if (!this.protocol.audioBuffer) {
-                    alert('Please load an audio file first!');
+                    this.protocol.showNotification('Please load an audio file first!', 'error');
                     return;
                 }
                 
@@ -1223,15 +1630,10 @@
                     
                     document.getElementById('saveImageBtn').disabled = false;
                     
-                    this.protocol.updateDecodeInfo(
-                        `Decoded: ${result.width}x${result.height}\n` +
-                        `Format: WSSTV v${this.protocol.version}\n` +
-                        `Encoding: ${this.protocol.colorEncoding.toUpperCase()}`
-                    );
-                    
                 } catch (error) {
                     console.error('Decoding error:', error);
                     this.protocol.updateDecodeStatus(`Error: ${error.message}`);
+                    this.protocol.showNotification('Decoding failed: ' + error.message, 'error');
                 }
             }
 
@@ -1253,6 +1655,15 @@
                     ctx.beginPath();
                     ctx.moveTo(0, y);
                     ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+                
+                // Vertical lines
+                for (let i = 0; i <= 10; i++) {
+                    const x = (i / 10) * width;
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
                     ctx.stroke();
                 }
                 
@@ -1281,10 +1692,14 @@
                 
                 ctx.stroke();
                 
-                // Mark start and end
-                ctx.fillStyle = '#e74c3c';
+                // Mark start
+                ctx.fillStyle = '#27ae60';
                 ctx.fillRect(0, 0, 4, height);
-                ctx.fillRect(width - 4, 0, 4, height);
+                
+                // Mark estimated end of header
+                const headerEnd = (1.0 / audioBuffer.duration) * width;
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(headerEnd - 2, 0, 4, height);
             }
 
             saveDecodedImage() {
@@ -1293,6 +1708,7 @@
                 link.download = 'wsstv_decoded_image.png';
                 link.href = canvas.toDataURL('image/png');
                 link.click();
+                this.protocol.showNotification('Image saved successfully!', 'success');
             }
         }
 
@@ -1302,4 +1718,4 @@
         });
     </script>
 </body>
-  </html>
+</html>

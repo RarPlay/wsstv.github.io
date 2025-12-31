@@ -940,35 +940,47 @@
             }
 
             async resizeImage(imageData, srcWidth, srcHeight, dstWidth, dstHeight) {
-                // Create canvas for resizing
-                const srcCanvas = document.createElement('canvas');
-                srcCanvas.width = srcWidth;
-                srcCanvas.height = srcHeight;
-                const srcCtx = srcCanvas.getContext('2d');
-                
-                // Put original image data
-                const srcImageData = new ImageData(imageData, srcWidth, srcHeight);
-                srcCtx.putImageData(srcImageData, 0, 0);
-                
-                // Create destination canvas
-                const dstCanvas = document.createElement('canvas');
-                dstCanvas.width = dstWidth;
-                dstCanvas.height = dstHeight;
-                const dstCtx = dstCanvas.getContext('2d');
-                
-                // Draw resized image
-                dstCtx.drawImage(srcCanvas, 0, 0, dstWidth, dstHeight);
-                
-                // Get resized data
-                const resizedData = dstCtx.getImageData(0, 0, dstWidth, dstHeight);
-                
-                return {
-                    data: resizedData.data,
-                    width: dstWidth,
-                    height: dstHeight
-                };
+    // Создаем canvas для изменения размера
+    const srcCanvas = document.createElement('canvas');
+    srcCanvas.width = srcWidth;
+    srcCanvas.height = srcHeight;
+    const srcCtx = srcCanvas.getContext('2d');
+    
+    // Создаем ImageData правильно
+    let srcImageData;
+    try {
+        // Способ 1: Через createImageData и копирование данных
+        srcImageData = srcCtx.createImageData(srcWidth, srcHeight);
+        srcImageData.data.set(imageData);
+    } catch (e) {
+        // Способ 2: Если первый способ не работает
+        srcImageData = new ImageData(
+            new Uint8ClampedArray(imageData), 
+            srcWidth, 
+            srcHeight
+        );
+    }
+    
+    srcCtx.putImageData(srcImageData, 0, 0);
+    
+    // Создаем canvas назначения
+    const dstCanvas = document.createElement('canvas');
+    dstCanvas.width = dstWidth;
+    dstCanvas.height = dstHeight;
+    const dstCtx = dstCanvas.getContext('2d');
+    
+    // Рисуем с измененным размером
+    dstCtx.drawImage(srcCanvas, 0, 0, dstWidth, dstHeight);
+    
+    // Получаем данные измененного размера
+    const resizedData = dstCtx.getImageData(0, 0, dstWidth, dstHeight);
+    
+    return {
+        data: resizedData.data,
+        width: dstWidth,
+        height: dstHeight
+    };
             }
-
             async generateAudio(buffer, imageData, width, height) {
                 const channelData = buffer.getChannelData(0);
                 let sampleIndex = 0;
